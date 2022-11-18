@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 
+// 尾袭：，造成三尾狐攻击100%的伤害
+// 诱惑：攻击敌人时回复自身生命上限20%的生命
+// 泪珠： 造成攻击100%的伤害
+// 治愈之光： 恢复50%的生命力，每回合恢复22%的生命力，持续2回合
 namespace _3_3_回合制对战
 {
     // 技能类型
@@ -73,15 +77,22 @@ namespace _3_3_回合制对战
             if(hp > maxHp) { hp = maxHp; }
             // hp = Math.Min(hp,maxHp);
         }
+
+        public int CalcDamage(int attack,int percent,int def = 0)
+        {
+            float a = attack * (percent / 10000f);
+            int damage = (int)(a * (1 - (float)def / (300 - def)));
+
+            return damage;
+        }
+
         public void Attack(Skill skill, Character other)
         {
             switch (skill.type)
             {
                 case SkillType.NormalAttack:
                     {
-                        float a = attack * (skill.data1 / 10000f);
-                        int damage = (int)(a * (1 - (float)other.def / (300 - other.def)));
-
+                        int damage = CalcDamage(attack, skill.data1, other.def);
                         other.CostHp(damage);
 
                         Console.WriteLine($"{this.name}使用{skill.name}对{other.name}造成{damage}点伤害。");
@@ -103,7 +114,7 @@ namespace _3_3_回合制对战
                     break;
                 case SkillType.Heal:
                     {
-                        int heal = (int)(attack * (skill.data1 / 10000f));
+                        int heal = CalcDamage(attack, skill.data1);
                         other.AddHp(heal);
 
                         Console.WriteLine($"{name} 使用了{skill.name}技能，治疗{heal}点体力~~");
@@ -112,11 +123,11 @@ namespace _3_3_回合制对战
                     break;
                 case SkillType.HealOverTime:
                     {
-                        int heal = (int)(attack * (skill.data1 / 10000f));
+                        int heal = CalcDamage(attack, skill.data1);
                         other.AddHp(heal);
 
                         // 添加状态
-                        State state = new State(StateType.Heal,skill.time,skill.data2);
+                        State state = new State(StateType.Heal,this,skill.time,skill.data2);
                         state.name = skill.name;                       
                         states.Add(state);
 
@@ -136,15 +147,14 @@ namespace _3_3_回合制对战
                 {
                     case StateType.Damage:
                         {
-                            float a = attack * (state.data1 / 10000f);
-                            int damage = (int)(a * (1 - (float)def / (300 - def)));
+                            int damage = CalcDamage(state.source.attack, state.data1, def);
                             this.CostHp(damage);
                             Console.WriteLine($"{state.name}生效，损失体力{damage},{hp/maxHp}");
                         }
                         break;
                     case StateType.Heal:
                         {
-                            int heal = (int)(attack * (state.data1 / 10000f));
+                            int heal = CalcDamage(state.source.attack, state.data1);
                             this.AddHp(heal);
                             Console.WriteLine($"{state.name}生效，回复体力{heal},{hp}/{maxHp}");
                         }
@@ -221,11 +231,13 @@ namespace _3_3_回合制对战
         public int data1;               // 治疗量 万分比
         public string name;             // 状态名称
 
-        public State(StateType type,int time,int data1)
+        public Character source;
+        public State(StateType type,Character source,int time,int data1)
         {
             this.type = type;
             this.time = time;
             this.data1 = data1;
+            this.source = source;
         }
 
         public override string ToString()

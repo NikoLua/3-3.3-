@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace _3_3_回合制对战
 {
-   
     class Program
     {
         // 输入数字，如果错误重新输入
